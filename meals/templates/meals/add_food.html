@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<h2>Add New Food Item</h2>
+<form method="post">
+  {% csrf_token %}
+
+  <fieldset>
+    <legend>General Info</legend>
+    <label for="id_brand">Brand:</label>
+    {{ form.brand }}
+
+    <label for="id_product">Product Name:</label>
+    {{ form.product }}
+  </fieldset>
+
+  <fieldset>
+    <legend>Nutritional Values (per 100g/ml or unit)</legend>
+    <label for="id_calories">Calories:</label>
+    {{ form.calories }}
+    <label for="id_protein">Protein (g):</label>
+    {{ form.protein }}
+    <label for="id_carbs">Carbs (g):</label>
+    {{ form.carbs }}
+    <label for="id_fats">Fats (g):</label>
+    {{ form.fats }}
+    <label for="id_fiber">Fiber (g):</label>
+    {{ form.fiber }}
+  </fieldset>
+
+  <fieldset>
+    <legend>Serving Info</legend>
+    <label for="id_unit">Unit (e.g. grams, piece):</label>
+    {{ form.unit }}
+  </fieldset>
+
+  <button type="submit">Save Food</button>
+</form>
+{% endblock %}

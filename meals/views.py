@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from .models import DailyMeal
-from .forms import DailyMealForm
+from .forms import DailyMealForm, FoodForm
 from django.contrib.auth.decorators import login_required
 import plotly.graph_objs as go
 from plotly.offline import plot
@@ -8,7 +8,7 @@ from plotly.offline import plot
 def home(request):
     return render(request, 'meals/home.html')
 
-@login_required
+#@login_required
 def add_meal(request):
     if request.method == 'POST':
         form = DailyMealForm(request.POST)
@@ -20,6 +20,16 @@ def add_meal(request):
     else:
         form = DailyMealForm()
     return render(request, 'meals/add_meal.html', {'form': form})
+
+def add_food(request):
+    if request.method == 'POST':
+        form = FoodForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('add_food')
+    else:
+        form = FoodForm()
+    return render(request, 'meals/add_food.html', {'form': form})
 
 @login_required
 def history(request):
