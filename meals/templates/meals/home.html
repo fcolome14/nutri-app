@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Welcome to the Nutrition Tracker App 🥗</h2>
+<ul>
+  <li><a href="{% url 'add_meal' %}">Add a meal</a></li>
+  <li><a href="{% url 'history' %}">View meal history</a></li>
+  <li><a href="/admin/">Go to Admin Panel</a></li>
+</ul>
+{% endblock %}
