@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect
-from .models import DailyMeal
+from .models import DailyMeal, Food
+from django.http import JsonResponse
 from .forms import DailyMealForm, FoodForm
 from django.contrib.auth.decorators import login_required
 import plotly.graph_objs as go
@@ -14,12 +15,23 @@ def add_meal(request):
         form = DailyMealForm(request.POST)
         if form.is_valid():
             meal = form.save(commit=False)
-            meal.user = request.user
-            meal.save()
-            return redirect('history')
+            food_id = request.POST.get('food')
+            if food_id:
+                from .models import Food
+                meal.food = Food.objects.get(id=food_id)
+                meal.user = request.user
+                meal.save()
+                return redirect('history')
     else:
         form = DailyMealForm()
     return render(request, 'meals/add_meal.html', {'form': form})
+
+
+def food_autocomplete(request):
+    query = request.GET.get('q', '')
+    foods = Food.objects.filter(product__icontains=query)[:10]
+    results = [{'id': f.code, 'name': f.product} for f in foods]
+    return JsonResponse(results, safe=False)
 
 def add_food(request):
     if request.method == 'POST':

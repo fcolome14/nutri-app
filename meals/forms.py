@@ -4,7 +4,7 @@ from .models import DailyMeal, Food
 class DailyMealForm(forms.ModelForm):
     class Meta:
         model = DailyMeal
-        fields = ['food', 'quantity', 'date']
+        fields = ['quantity', 'date']
 
 class FoodForm(forms.ModelForm):
     class Meta:

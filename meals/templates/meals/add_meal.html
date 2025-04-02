@@ -1,9 +1,86 @@
 {% extends 'base.html' %}
 {% block content %}
 <h2>Add Meal</h2>
-<form method="post">
+<form method="post" id="meal-form">
     {% csrf_token %}
+
+    <label for="food-search">Food:</label>
+    <input type="text" id="food-search" autocomplete="off" placeholder="Search food..." 
+       style="background-color: #1e1e1e; color: white; border: 1px solid #444; padding: 8px; border-radius: 6px;">
+
+    <input type="hidden" name="food" id="food-id">  <!-- will be submitted -->
+
+    <ul id="suggestions"></ul>
+
     {{ form.as_p }}
+    
     <button type="submit">Save</button>
 </form>
+
+<style>
+    #suggestions {
+      border: 1px solid #444;
+      list-style: none;
+      padding-left: 0;
+      max-height: 200px;
+      overflow-y: auto;
+      background-color: #1e1e1e;
+      color: #ffffff;
+      width: 300px;
+      position: absolute;
+      z-index: 1000;
+      margin-top: 0.25rem;
+      border-radius: 6px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    }
+  
+    #suggestions li {
+      padding: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.2s;
+    }
+  
+    #suggestions li:hover {
+      background-color: #333;
+    }
+  </style>  
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('food-search');
+    const hiddenInput = document.getElementById('food-id');
+    const suggestionsBox = document.getElementById('suggestions');
+
+    searchInput.addEventListener('input', function () {
+      const query = this.value;
+      if (query.length < 2) {
+        suggestionsBox.innerHTML = '';
+        return;
+      }
+
+      fetch(`/food-autocomplete/?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+          suggestionsBox.innerHTML = '';
+          data.forEach(item => {
+            const li = document.createElement('li');
+            li.textContent = item.name;
+            li.addEventListener('click', () => {
+              searchInput.value = item.name;
+              hiddenInput.value = item.id;
+              suggestionsBox.innerHTML = '';
+            });
+            suggestionsBox.appendChild(li);
+          });
+        });
+    });
+
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest('#food-search') && !e.target.closest('#suggestions')) {
+        suggestionsBox.innerHTML = '';
+      }
+    });
+  });
+</script>
 {% endblock %}
