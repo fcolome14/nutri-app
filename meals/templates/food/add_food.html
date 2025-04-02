@@ -17,7 +17,7 @@
 
   <fieldset>
     <legend>Nutritional Values (per 100g/ml or unit)</legend>
-    <label for="id_calories">Calories:</label>
+    <label for="id_calories">Calories (kcal):</label>
     {{ form.calories }}
     <label for="id_protein">Protein (g):</label>
     {{ form.protein }}
@@ -31,7 +31,9 @@
 
   <fieldset>
     <legend>Serving Info</legend>
-    <label for="id_unit">Unit (e.g. grams, piece):</label>
+    <label for="id_servicing">Servicing amount:</label>
+    {{ form.serving_amount }}
+    <label for="id_unit">Unit (e.g. g, ml or units):</label>
     {{ form.unit }}
   </fieldset>
 

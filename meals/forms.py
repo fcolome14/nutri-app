@@ -9,4 +9,8 @@ class DailyMealForm(forms.ModelForm):
 class FoodForm(forms.ModelForm):
     class Meta:
         model = Food
-        fields = ['brand', 'product', 'calories', 'protein', 'carbs', 'fats', 'fiber', 'unit']
+        fields = '__all__'
+        
+    def __init__(self, *args, **kwargs):
+        super(FoodForm, self).__init__(*args, **kwargs)
+        self.fields['serving_amount'].initial = 100
