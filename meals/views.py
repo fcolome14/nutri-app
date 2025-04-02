@@ -8,7 +8,7 @@ import plotly.graph_objs as go
 from plotly.offline import plot
 
 def home(request):
-    return render(request, 'meals/home.html')
+    return render(request, 'home/home.html')
 
 #@login_required
 def add_meal(request):
@@ -58,7 +58,7 @@ def add_food(request):
             return redirect('add_food')
     else:
         form = FoodForm()
-    return render(request, 'meals/add_food.html', {'form': form})
+    return render(request, 'food/add_food.html', {'form': form})
 
 @login_required
 def history(request):
