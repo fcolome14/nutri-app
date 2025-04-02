@@ -1,7 +1,8 @@
 from django.shortcuts import render, redirect
 from .models import DailyMeal, Food
 from django.http import JsonResponse
-from .forms import DailyMealForm, FoodForm
+from .forms import FoodForm
+import json
 from django.contrib.auth.decorators import login_required
 import plotly.graph_objs as go
 from plotly.offline import plot
@@ -12,25 +13,41 @@ def home(request):
 #@login_required
 def add_meal(request):
     if request.method == 'POST':
-        form = DailyMealForm(request.POST)
-        if form.is_valid():
-            meal = form.save(commit=False)
-            food_id = request.POST.get('food')
-            if food_id:
-                from .models import Food
-                meal.food = Food.objects.get(id=food_id)
-                meal.user = request.user
-                meal.save()
-                return redirect('history')
-    else:
-        form = DailyMealForm()
-    return render(request, 'meals/add_meal.html', {'form': form})
+        meals_data = json.loads(request.POST.get('meals_json', '[]'))
+        for item in meals_data:
+            try:
+                food = Food.objects.get(id=item['food_id'])
+                DailyMeal.objects.create(
+                    user=request.user,
+                    food=food,
+                    quantity=item['quantity'],
+                    date=item['date']
+                )
+            except Food.DoesNotExist:
+                continue  # Or log
+        return redirect('history')  # or your target view
+
+    return render(request, 'meals/add_meal.html')
 
 
 def food_autocomplete(request):
     query = request.GET.get('q', '')
+
+    if not query:
+        return JsonResponse([], safe=False)
+
     foods = Food.objects.filter(product__icontains=query)[:10]
-    results = [{'id': f.code, 'name': f.product} for f in foods]
+    results = []
+
+    for f in foods:
+        product = f.product or "Unnamed"
+        brand = f.brand or ""
+        if brand.upper() == "NA":
+            label = product
+        else:
+            label = f"{product} ({brand})"
+        results.append({'id': f.id, 'name': label})
+
     return JsonResponse(results, safe=False)
 
 def add_food(request):
