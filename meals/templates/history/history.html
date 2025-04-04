@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block content %}
-<h2>Meal History</h2>
+<h2>Your stats</h2>
 
 <form method="get">
     <label for="start_date">Start date:</label>
@@ -11,6 +11,30 @@
     <input type="date" name="end_date" value="{{ end_date }}">
     <button type="submit">Filter</button>
 </form>
+
+<h3>Summary from the last {{ days }} days</h3>
+<ul>
+  <li><strong>Average Calories:</strong> {{ summary.calories }} kcal</li>
+  <li><strong>Average Protein:</strong> {{ summary.protein }} g</li>
+  <li><strong>Average Carbs:</strong> {{ summary.carbs }} g</li>
+  <li><strong>Average Fats:</strong> {{ summary.fats }} g</li>
+</ul>
+
+{% if cal_ranges.max_calories_day and cal_ranges.max_calories_value %}
+  <h4 style="margin-top: 20px;">🔥 Highest Ingestion Day: </h4>
+  <p>
+    <strong>{{ cal_ranges.max_calories_day|date:"F j, Y" }}:</strong>
+    {{ max_calories_value }} kcal
+  </p>
+{% endif %}
+
+{% if cal_ranges.min_calories_day and cal_ranges.min_calories_value %}
+  <h4>🥗 Lowest Ingestion Day:</h4>
+  <p>
+    <strong>{{ cal_ranges.min_calories_day|date:"F j, Y" }}:</strong>
+    {{ cal_ranges.min_calories_value }} kcal
+  </p>
+{% endif %}
 
 <h3>Calories Over Time</h3>
 <div id="line-chart">{{ line_plot|safe }}</div>
@@ -21,17 +45,11 @@
 <h3>Daily Macros</h3>
 <div id="bar-chart">{{ bar_chart|safe }}</div>
 
-<h3>Summary</h3>
-<ul>
-  <li><strong>Total Calories:</strong> {{ summary.calories }}</li>
-  <li><strong>Total Protein:</strong> {{ summary.protein }} g</li>
-  <li><strong>Total Carbs:</strong> {{ summary.carbs }} g</li>
-  <li><strong>Total Fats:</strong> {{ summary.fats }} g</li>
-</ul>
 {% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'meals/css/history.css' %}">
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script src="{% static 'meals/js/history.js' %}" defer></script>
+<script src="{% static 'meals/js/date-validation.js' %}" defer></script>
 {% endblock %}

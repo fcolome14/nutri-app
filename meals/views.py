@@ -7,7 +7,14 @@ from django.contrib.auth.decorators import login_required
 import plotly.graph_objs as go
 from plotly.offline import plot
 from django.contrib.auth.models import User
-from datetime import datetime
+from datetime import datetime, timedelta
+from django.utils.dateparse import parse_date
+
+macro_colors = {
+    'Protein': '#636EFA',  # blue
+    'Carbs':   '#EF553B',  # red
+    'Fats':    '#00CC96'   # green
+}
 
 def home(request):
     return render(request, 'home/home.html')
@@ -78,36 +85,87 @@ def add_food(request):
         form = FoodForm()
     return render(request, 'food/add_food.html', {'form': form})
 
+
+def _check_date(start_date, end_date):
+    if isinstance(start_date, str) and start_date:
+        start_date = parse_date(start_date)
+    else:
+        start_date = datetime.today().date() - timedelta(days=6)
+
+    if isinstance(end_date, str) and end_date:
+        end_date = parse_date(end_date)
+    else:
+        end_date = datetime.today().date()
+
+    return start_date, end_date
+
+def get_calorie_extremes(day_stats):
+    if day_stats:
+        max_day = max(day_stats, key=lambda d: day_stats[d]['calories'])
+        min_day = min(day_stats, key=lambda d: day_stats[d]['calories'])
+        return {
+            'max_calories_day': max_day,
+            'max_calories_value': day_stats[max_day]['calories'],
+            'min_calories_day': min_day,
+            'min_calories_value': day_stats[min_day]['calories'],
+        }
+    return {
+        'max_calories_day': None,
+        'max_calories_value': None,
+        'min_calories_day': None,
+        'min_calories_value': None,
+    }
+
 def history(request):
     # Default range: past 7 days
 
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date') or datetime.today().date()
+    start_date_dt, end_date_dt = _check_date(start_date, end_date)
+    
+    days = (end_date_dt - start_date_dt).days + 1
 
     if start_date:
         meals = DailyMeal.objects.filter(
             user=get_dummy_user(),
-            date__range=[start_date, end_date]
+            date__range=[start_date_dt, end_date_dt]
         ).order_by('date')
     else:
         meals = DailyMeal.objects.filter(user=get_dummy_user()).order_by('date')
-
-    # Group by date
+    
     day_stats = {}
-    for meal in meals:
-        day = meal.date
-        if day not in day_stats:
-            day_stats[day] = {'calories': 0, 'protein': 0, 'carbs': 0, 'fats': 0}
-        day_stats[day]['calories'] += meal.calories or 0
-        day_stats[day]['protein'] += meal.protein or 0
-        day_stats[day]['carbs'] += meal.carbs or 0
-        day_stats[day]['fats'] += meal.fats or 0
+    if meals.exists() and days>0:
+        for meal in meals:
+            day = meal.date
+            if day not in day_stats:
+                day_stats[day] = {'calories': 0, 'protein': 0, 'carbs': 0, 'fats': 0}
+            day_stats[day]['calories'] += meal.calories or 0
+            day_stats[day]['protein'] += meal.protein or 0
+            day_stats[day]['carbs'] += meal.carbs or 0
+            day_stats[day]['fats'] += meal.fats or 0
 
-    dates = sorted(day_stats.keys())
-    calories = [day_stats[d]['calories'] for d in dates]
-    protein = [day_stats[d]['protein'] for d in dates]
-    carbs = [day_stats[d]['carbs'] for d in dates]
-    fats = [day_stats[d]['fats'] for d in dates]
+        # Extract stats
+        dates = sorted(day_stats.keys())
+        calories = [day_stats[d]['calories'] for d in dates]
+        protein = [day_stats[d]['protein'] for d in dates]
+        carbs = [day_stats[d]['carbs'] for d in dates]
+        fats = [day_stats[d]['fats'] for d in dates]
+        
+        # Extract max/min calories days
+        cal_ranges = get_calorie_extremes(day_stats)
+        max_calories_day = cal_ranges['max_calories_day']
+        max_calories_value = cal_ranges['max_calories_value']
+        min_calories_day = cal_ranges['min_calories_day']
+        min_calories_value = cal_ranges['min_calories_value']
+    else:
+        # Empty result defaults
+        dates = []
+        calories = []
+        protein = []
+        carbs = []
+        fats = []
+        max_calories_value = min_calories_value = 0
+        max_calories_day = min_calories_day = None
 
     # Line Chart – Calories
     fig1 = go.Figure()
@@ -122,15 +180,23 @@ def history(request):
     fig2 = go.Figure(data=[
         go.Pie(labels=['Protein', 'Carbs', 'Fats'],
                values=[total_protein, total_carbs, total_fats],
-               hole=0.3)
+               hole=0.3,
+               marker=dict(colors=[
+                macro_colors['Protein'],
+                macro_colors['Carbs'],
+                macro_colors['Fats']
+               ]),)
     ])
     pie_chart = plot(fig2, output_type='div', include_plotlyjs=False)
 
     # Bar Chart – Macros per Day
     fig3 = go.Figure()
-    fig3.add_trace(go.Bar(x=dates, y=protein, name='Protein'))
-    fig3.add_trace(go.Bar(x=dates, y=carbs, name='Carbs'))
-    fig3.add_trace(go.Bar(x=dates, y=fats, name='Fats'))
+    fig3.add_trace(go.Bar(x=dates, y=protein, name='Protein',
+                        marker=dict(color=macro_colors['Protein'])))
+    fig3.add_trace(go.Bar(x=dates, y=carbs, name='Carbs',
+                        marker=dict(color=macro_colors['Carbs'])))
+    fig3.add_trace(go.Bar(x=dates, y=fats, name='Fats',
+                        marker=dict(color=macro_colors['Fats'])))
     fig3.update_layout(barmode='group', title='Macros per Day')
     bar_chart = plot(fig3, output_type='div', include_plotlyjs=False)
 
@@ -139,11 +205,18 @@ def history(request):
         'pie_chart': pie_chart,
         'bar_chart': bar_chart,
         'summary': {
-            'calories': round(sum(calories),2),
-            'protein': round(total_protein,2),
-            'carbs': round(total_carbs,2),
-            'fats': round(total_fats,2),
+            'calories': round(sum(calories)/days,2),
+            'protein': round(total_protein/days,2),
+            'carbs': round(total_carbs/days,2),
+            'fats': round(total_fats/days,2),
         },
+        'cal_ranges':{
+            'max_calories_day': max_calories_day,
+            'max_calories_value': max_calories_value,
+            'min_calories_day': min_calories_day,
+            'min_calories_value': min_calories_value,
+        },
+        'days': days,
         'start_date': start_date,
         'end_date': end_date,
     })
