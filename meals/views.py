@@ -125,7 +125,7 @@ def history(request):
     
     days = (end_date_dt - start_date_dt).days + 1
 
-    if start_date:
+    if start_date_dt:
         meals = DailyMeal.objects.filter(
             user=get_dummy_user(),
             date__range=[start_date_dt, end_date_dt]
@@ -217,7 +217,7 @@ def history(request):
             'min_calories_value': min_calories_value,
         },
         'days': days,
-        'start_date': start_date,
-        'end_date': end_date,
+        'start_date': start_date_dt.isoformat(),
+        'end_date': end_date_dt.isoformat(),
     })
 
