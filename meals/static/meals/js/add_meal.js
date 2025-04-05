@@ -5,6 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
 const MealApp = (() => {
   const meals = [];
   let debounceTimeout = null;
+  const cache = {};
+  const MAX_CACHE_SIZE = 100;
 
   // Element references
   const elements = {
@@ -66,9 +68,17 @@ const MealApp = (() => {
   }
   
   function fetchSuggestions(query) {
+    const normalizedQuery = query.toLowerCase().trim();
+    if (cache[normalizedQuery]) {
+      showSuggestions(cache[normalizedQuery]);
+      return;
+    }
+
     fetch(`/food-autocomplete/?q=${encodeURIComponent(query)}`)
       .then(response => response.json())
-      .then(data => showSuggestions(data))
+      .then(data => {
+        cacheSuggestions(normalizedQuery, data);
+        showSuggestions(data)})
       .catch(console.error);
   }
 
@@ -87,7 +97,7 @@ const MealApp = (() => {
         elements.foodId.value = item.id;
         suggestionsBox.innerHTML = '';
       });
-      suggestionsBox.appendChild(li);
+      suggestionsBox.appendChild(li);food-search
     });
   }
 
@@ -159,6 +169,13 @@ const MealApp = (() => {
 
   function updateMealsJson() {
     elements.mealsJson.value = JSON.stringify(meals);
+  }
+
+  function cacheSuggestions(key, data) {
+    if (Object.keys(cache).length >= MAX_CACHE_SIZE) {
+      delete cache[Object.keys(cache)[0]]; // Basic FIFO cache cleanup
+    }
+    cache[key] = data;
   }
 
   function addMeal() {

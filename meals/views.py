@@ -9,6 +9,7 @@ from plotly.offline import plot
 from django.contrib.auth.models import User
 from datetime import datetime, timedelta
 from django.utils.dateparse import parse_date
+from django.core.cache import cache
 
 macro_colors = {
     'Protein': '#636EFA',  # blue
@@ -60,7 +61,12 @@ def food_autocomplete(request):
 
     if not query:
         return JsonResponse([], safe=False)
-
+    
+    # Check if the query is in the cache
+    cached_results = cache.get(f'food_autocomplete_{query}')
+    if cached_results:
+        return JsonResponse(cached_results, safe=False)
+    
     foods = Food.objects.filter(product__icontains=query)[:10]
     results = []
 
