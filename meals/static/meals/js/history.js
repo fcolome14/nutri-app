@@ -8,20 +8,27 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const formatDate = (date) => date.toISOString().split('T')[0];
 
-    if (!startDateInput.value) {
+    if (startDateInput && !startDateInput.value) {
         startDateInput.value = formatDate(weekAgo);
+        endDateInput.min = startDateInput.value;
     }
 
-    if (!endDateInput.value) {
+    if (endDateInput && !endDateInput.value) {
         endDateInput.value = formatDate(today);
     }
 
-    endDateInput.min = startDateInput.value;
-
-    startDateInput.addEventListener('change', function () {
-        endDateInput.min = this.value;
-        if (endDateInput.value < this.value) {
-            endDateInput.value = '';
-        }
-    });
+    if (startDateInput && endDateInput) {
+        endDateInput.min = startDateInput.value;
+    
+        startDateInput.addEventListener('change', function () {
+            endDateInput.min = this.value;
+            if (endDateInput.value < this.value) {
+                endDateInput.value = '';
+            }
+        });
+    } else {
+        if (!startDateInput) console.warn("'start_date' input not found.");
+        if (!endDateInput) console.warn("'end_date' input not found.");
+    }
+    
 });

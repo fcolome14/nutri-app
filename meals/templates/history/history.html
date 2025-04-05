@@ -12,7 +12,22 @@
     <button type="submit">Filter</button>
 </form>
 
-<h3>Summary from the last {{ days }} days</h3>
+<h3>
+  {% if days == 0 and end_date == today %}
+      Summary from today
+  {% elif days == 0 and end_date != today %}
+      Summary from {{ end_date }}
+  {% elif days == 1 %}
+      Summary from yesterday
+  {% elif days > 1 and end_date == today %}
+      Summary from the last {{ days }} days
+  {% elif days > 1 and end_date != today %}
+      Summary from {{ start_date }} to {{ end_date }}
+  {% else %}
+      Summary from the last {{ days }} days
+  {% endif %}
+</h3>
+
 <ul>
   <li><strong>Average Calories:</strong> {{ summary.calories }} kcal</li>
   <li><strong>Average Protein:</strong> {{ summary.protein }} g</li>
@@ -29,7 +44,7 @@
 {% endif %}
 
 {% if cal_ranges.min_calories_day and cal_ranges.min_calories_value %}
-  <h4>🥗 Lowest Ingestion Day:</h4>
+  <h4>😞 Lowest Ingestion Day:</h4>
   <p>
     <strong>{{ cal_ranges.min_calories_day|date:"F j, Y" }}:</strong>
     {{ cal_ranges.min_calories_value }} kcal
@@ -51,5 +66,4 @@
 <link rel="stylesheet" href="{% static 'meals/css/history.css' %}">
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script src="{% static 'meals/js/history.js' %}" defer></script>
-<script src="{% static 'meals/js/date-validation.js' %}" defer></script>
 {% endblock %}

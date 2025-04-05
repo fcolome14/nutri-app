@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block content %}
-<h2>Add Multiple Meals</h2>
+
+<h2><i class="fas fa-utensils"></i> Add Multiple Meals</h2>
 
 <link rel="stylesheet" href="{% static 'meals/css/add_meal.css' %}">
 
@@ -9,25 +10,48 @@
   {% csrf_token %}
 
   <div class="input-container">
-    <input type="text" id="food-search" placeholder="Search food..." autocomplete="off">
-    <input type="hidden" id="food-id">
-    <input type="number" id="quantity" placeholder="Quantity (g/ml/units)" min="1" step="any">
+    <label for="food-search">Food Search:</label>
+    <input type="text" id="food-search" placeholder="e.g., Apple, Rice, Chicken" autocomplete="off">
+    
+    <input type="hidden" id="food-id" name="food-id">
+
+    <label for="quantity">Quantity (g/ml/units):</label>
+    <input type="number" id="quantity" placeholder="e.g., 100 (grams)" min="1" step="any">
+
+    <label for="date">Date:</label>
     <input type="date" id="date">
 
     <label class="keep-date-label">
       <input type="checkbox" id="keep-date" checked>
       Keep this date for all entries
     </label>
+  </div>
 
-    <button type="button" onclick="addMeal()" class="add-button" title="Add Meal">➕</button>
+  <div class="button-container">
+    <button type="button" onclick="addMeal()" id="add-meal-button" class="add-meal" title="Add Meal">➕ Add Meal</button>
+    <button type="button" onclick="clearAll()" class="clear-button" title="Clear All">🗑️ Clear All</button>
   </div>
 
   <h4>Items Added: <span id="counter">0</span></h4>
-  <ul id="meal-list"></ul>
+  <table id="meal-list" class="meal-table">
+    <thead>
+      <tr>
+        <th>Food</th>
+        <th>Quantity</th>
+        <th>Date</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="meal-list-body">
+      <!-- Dynamically added rows will go here -->
+    </tbody>
+  </table>
 
   <input type="hidden" name="meals_json" id="meals-json">
-  <button type="submit">Save All</button>
+  <button type="submit" class="save-button">💾 Save All</button>
 </form>
+
+<div id="feedback-message" class="hidden">Meals saved successfully!</div>
 
 <script src="{% static 'meals/js/add_meal.js' %}"></script>
 {% endblock %}

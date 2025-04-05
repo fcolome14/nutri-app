@@ -43,7 +43,7 @@ def add_meal(request):
                 )
 
             except (Food.DoesNotExist, KeyError, ValueError):
-                continue  # log or skip silently
+                continue 
 
         return redirect('add_meal')
 
@@ -123,7 +123,7 @@ def history(request):
     end_date = request.GET.get('end_date') or datetime.today().date()
     start_date_dt, end_date_dt = _check_date(start_date, end_date)
     
-    days = (end_date_dt - start_date_dt).days + 1
+    days = (end_date_dt - start_date_dt).days
 
     if start_date_dt:
         meals = DailyMeal.objects.filter(
@@ -143,7 +143,11 @@ def history(request):
             day_stats[day]['protein'] += meal.protein or 0
             day_stats[day]['carbs'] += meal.carbs or 0
             day_stats[day]['fats'] += meal.fats or 0
-
+        
+        count_valid_days = 0
+        for day in day_stats:
+            if day_stats[day]['calories'] > 0:
+                count_valid_days += 1
         # Extract stats
         dates = sorted(day_stats.keys())
         calories = [day_stats[d]['calories'] for d in dates]
@@ -166,10 +170,21 @@ def history(request):
         fats = []
         max_calories_value = min_calories_value = 0
         max_calories_day = min_calories_day = None
+        count_valid_days = 1
 
     # Line Chart – Calories
     fig1 = go.Figure()
-    fig1.add_trace(go.Scatter(x=dates, y=calories, mode='lines+markers', name='Calories'))
+    fig1.add_trace(go.Scatter(
+        x=dates, 
+        y=calories, 
+        mode='lines+markers', 
+        name='Calories',
+        hovertemplate='<b>Date:</b> %{x}<br><b>Calories:</b> %{y} kcal<extra></extra>'))
+    fig1.update_layout(
+        title='Calories Over Time',         # Chart title
+        xaxis_title='Day',                 # X-axis title
+        yaxis_title='Calories (kcal)',      # Y-axis title
+    )
     line_plot = plot(fig1, output_type='div', include_plotlyjs=False)
 
     # Pie Chart – Macro Distribution
@@ -185,18 +200,32 @@ def history(request):
                 macro_colors['Protein'],
                 macro_colors['Carbs'],
                 macro_colors['Fats']
-               ]),)
+               ]),
+               hovertemplate=(
+                '<b>%{label}:</b> %{value} g<br>'
+                '<b>Percentage:</b> %{percent}<extra></extra>'
+                ),  
+               )
     ])
     pie_chart = plot(fig2, output_type='div', include_plotlyjs=False)
 
     # Bar Chart – Macros per Day
     fig3 = go.Figure()
     fig3.add_trace(go.Bar(x=dates, y=protein, name='Protein',
-                        marker=dict(color=macro_colors['Protein'])))
+                        marker=dict(color=macro_colors['Protein']),
+                        hovertemplate=(
+                            '<b>Protein:</b> %{y} g<extra></extra>'
+                        )))
     fig3.add_trace(go.Bar(x=dates, y=carbs, name='Carbs',
-                        marker=dict(color=macro_colors['Carbs'])))
+                        marker=dict(color=macro_colors['Carbs']),
+                        hovertemplate=(
+                            '<b>Carbs:</b> %{y} g<extra></extra>'
+                        )))
     fig3.add_trace(go.Bar(x=dates, y=fats, name='Fats',
-                        marker=dict(color=macro_colors['Fats'])))
+                        marker=dict(color=macro_colors['Fats']),
+                        hovertemplate=(
+                            '<b>Fats:</b> %{y} g<extra></extra>'
+                        )))
     fig3.update_layout(barmode='group', title='Macros per Day')
     bar_chart = plot(fig3, output_type='div', include_plotlyjs=False)
 
@@ -205,10 +234,10 @@ def history(request):
         'pie_chart': pie_chart,
         'bar_chart': bar_chart,
         'summary': {
-            'calories': round(sum(calories)/days,2),
-            'protein': round(total_protein/days,2),
-            'carbs': round(total_carbs/days,2),
-            'fats': round(total_fats/days,2),
+            'calories': round(sum(calories)/count_valid_days,2),
+            'protein': round(total_protein/count_valid_days,2),
+            'carbs': round(total_carbs/count_valid_days,2),
+            'fats': round(total_fats/count_valid_days,2),
         },
         'cal_ranges':{
             'max_calories_day': max_calories_day,
@@ -216,6 +245,7 @@ def history(request):
             'min_calories_day': min_calories_day,
             'min_calories_value': min_calories_value,
         },
+        'today': datetime.today().strftime('%Y-%m-%d'),
         'days': days,
         'start_date': start_date_dt.isoformat(),
         'end_date': end_date_dt.isoformat(),

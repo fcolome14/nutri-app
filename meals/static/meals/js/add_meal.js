@@ -1,79 +1,190 @@
-const meals = [];
+document.addEventListener('DOMContentLoaded', () => {
+  MealApp.init();
+});
 
-function addMeal() {
-  const foodId = document.getElementById('food-id').value;
-  const foodName = document.getElementById('food-search').value;
-  const quantity = document.getElementById('quantity').value;
-  const dateInput = document.getElementById('date');
-  const keepDate = document.getElementById('keep-date').checked;
-  const date = dateInput.value;
+const MealApp = (() => {
+  const meals = [];
+  let debounceTimeout = null;
 
-  if (!foodId || !quantity || !date) {
-    alert('Please fill in all fields before adding.');
-    return;
+  // Element references
+  const elements = {
+    foodSearch: document.getElementById('food-search'),
+    foodId: document.getElementById('food-id'),
+    quantity: document.getElementById('quantity'),
+    date: document.getElementById('date'),
+    keepDate: document.getElementById('keep-date'),
+    tableBody: document.getElementById('meal-list-body'),
+    mealsJson: document.getElementById('meals-json'),
+    counter: document.getElementById('counter'),
+  };
+
+  const suggestionsBox = createSuggestionsBox();
+
+  function init() {
+    setTodayAsDefaultDate();
+    setupAutocomplete();
+    setupOutsideClickListener();
+    setupAddMealButton();
   }
 
-  meals.push({ food_id: foodId, quantity, date });
-
-  const list = document.getElementById('meal-list');
-  const li = document.createElement('li');
-  li.innerHTML = `<strong>${foodName}</strong>: ${quantity}g [${date}]`;
-  list.appendChild(li);
-
-  document.getElementById('counter').textContent = meals.length;
-  document.getElementById('meals-json').value = JSON.stringify(meals);
-
-  document.getElementById('food-id').value = '';
-  document.getElementById('food-search').value = '';
-  document.getElementById('quantity').value = '';
-  if (!keepDate) {
-    dateInput.value = '';
+  function setTodayAsDefaultDate() {
+    const today = new Date().toISOString().split('T')[0];
+    elements.date.value = today;
   }
-}
 
-document.addEventListener('DOMContentLoaded', function () {
-  const searchInput = document.getElementById('food-search');
-  const hiddenInput = document.getElementById('food-id');
-  const suggestionsBox = document.createElement('ul');
-  const dateInput = document.getElementById('date');
+  function createSuggestionsBox() {
+    const box = document.createElement('ul');
+    box.id = 'suggestions';
+    box.style.position = 'absolute';
+    box.style.zIndex = '1000';
+    document.body.appendChild(box);
+    return box;
+  }
 
-  const today = new Date().toISOString().split('T')[0];
-  dateInput.value = today;
+  function setupAutocomplete() {
+    elements.foodSearch.addEventListener('input', () => {
+      const query = elements.foodSearch.value.trim();
+      clearTimeout(debounceTimeout);
 
-  suggestionsBox.id = 'suggestions';
-  document.body.appendChild(suggestionsBox);
+      debounceTimeout = setTimeout(() => {
+        if (query.length < 2) {
+          suggestionsBox.innerHTML = '';
+          return;
+        }
+        fetchSuggestions(query);
+      }, 500);
+    });
+  }
 
-  searchInput.addEventListener('input', function () {
-    const query = this.value;
-    if (query.length < 2) {
-      suggestionsBox.innerHTML = '';
+  function setupAddMealButton() {
+    const addButton = document.getElementById('add-meal-button');
+    if (addButton) {
+      addButton.addEventListener('click', addMeal);
+    } else {
+      console.warn("⚠️ 'Add Meal' button not found!");
+    }
+  }
+  
+  function fetchSuggestions(query) {
+    fetch(`/food-autocomplete/?q=${encodeURIComponent(query)}`)
+      .then(response => response.json())
+      .then(data => showSuggestions(data))
+      .catch(console.error);
+  }
+
+  function showSuggestions(data) {
+    suggestionsBox.innerHTML = '';
+    const rect = elements.foodSearch.getBoundingClientRect();
+    suggestionsBox.style.top = `${rect.bottom + window.scrollY}px`;
+    suggestionsBox.style.left = `${rect.left + window.scrollX}px`;
+
+    data.forEach(item => {
+      const li = document.createElement('li');
+      li.textContent = item.name;
+      li.style.cursor = 'pointer';
+      li.addEventListener('click', () => {
+        elements.foodSearch.value = item.name;
+        elements.foodId.value = item.id;
+        suggestionsBox.innerHTML = '';
+      });
+      suggestionsBox.appendChild(li);
+    });
+  }
+
+  function setupOutsideClickListener() {
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#food-search') && !e.target.closest('#suggestions')) {
+        suggestionsBox.innerHTML = '';
+      }
+    });
+  }
+
+  function validateInputs() {
+    const { foodId, quantity, date } = elements;
+    return foodId.value && quantity.value && date.value;
+  }
+
+  function updateMealCounter(change) {
+    elements.counter.textContent = parseInt(elements.counter.textContent) + change;
+  }
+
+  function clearInputs() {
+    elements.foodId.value = '';
+    elements.foodSearch.value = '';
+    elements.quantity.value = '';
+    if (!elements.keepDate.checked) {
+      elements.date.value = '';
+    }
+  }
+
+  function createMealRow({ food_id, food_name, quantity, date }) {
+    const row = document.createElement('tr');
+
+    row.appendChild(createTableCell(food_name));
+    row.appendChild(createTableCell(`${quantity}g`));
+    row.appendChild(createTableCell(date));
+
+    const actionsCell = document.createElement('td');
+    const deleteButton = createDeleteButton(() => {
+      const index = meals.findIndex(
+        m => m.food_id === food_id && m.quantity === quantity && m.date === date
+      );
+      if (index > -1) meals.splice(index, 1);
+      row.remove();
+      updateMealCounter(-1);
+      updateMealsJson();
+    });
+    actionsCell.appendChild(deleteButton);
+    row.appendChild(actionsCell);
+
+    return row;
+  }
+
+  function createTableCell(content) {
+    const cell = document.createElement('td');
+    cell.textContent = content;
+    return cell;
+  }
+
+  function createDeleteButton(onClick) {
+    const btn = document.createElement('button');
+    btn.textContent = '❌';
+    btn.title = 'Remove';
+    btn.classList.add('delete-button');
+    btn.style.color = 'red';
+    btn.style.cursor = 'pointer';
+    btn.addEventListener('click', onClick);
+    return btn;
+  }
+
+  function updateMealsJson() {
+    elements.mealsJson.value = JSON.stringify(meals);
+  }
+
+  function addMeal() {
+    if (!validateInputs()) {
+      alert('Please fill in all fields before adding.');
       return;
     }
 
-    fetch(`/food-autocomplete/?q=${encodeURIComponent(query)}`)
-      .then(response => response.json())
-      .then(data => {
-        suggestionsBox.innerHTML = '';
-        const rect = searchInput.getBoundingClientRect();
-        suggestionsBox.style.top = rect.bottom + window.scrollY + 'px';
-        suggestionsBox.style.left = rect.left + window.scrollX + 'px';
+    const meal = {
+      food_id: elements.foodId.value,
+      food_name: elements.foodSearch.value,
+      quantity: elements.quantity.value,
+      date: elements.date.value,
+    };
 
-        data.forEach(item => {
-          const li = document.createElement('li');
-          li.textContent = item.name;
-          li.addEventListener('click', () => {
-            searchInput.value = item.name;
-            hiddenInput.value = item.id;
-            suggestionsBox.innerHTML = '';
-          });
-          suggestionsBox.appendChild(li);
-        });
-      });
-  });
+    meals.push(meal);
 
-  document.addEventListener('click', function (e) {
-    if (!e.target.closest('#food-search') && !e.target.closest('#suggestions')) {
-      suggestionsBox.innerHTML = '';
-    }
-  });
-});
+    const row = createMealRow(meal);
+    elements.tableBody.appendChild(row);
+    updateMealCounter(1);
+    updateMealsJson();
+    clearInputs();
+  }
+
+  return {
+    init,
+    addMeal,
+  };
+})();
