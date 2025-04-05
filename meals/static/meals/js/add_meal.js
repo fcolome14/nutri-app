@@ -27,11 +27,15 @@ const MealApp = (() => {
     setupAutocomplete();
     setupOutsideClickListener();
     setupAddMealButton();
+    loadMealsFromSession();
+    setupAddSelectedDate();
   }
 
   function setTodayAsDefaultDate() {
+    const savedDate = sessionStorage.getItem('selectedDate');
     const today = new Date().toISOString().split('T')[0];
-    elements.date.value = today;
+  
+    elements.date.value = savedDate || today;
   }
 
   function createSuggestionsBox() {
@@ -65,6 +69,12 @@ const MealApp = (() => {
     } else {
       console.warn("⚠️ 'Add Meal' button not found!");
     }
+  }
+
+  function setupAddSelectedDate() {
+    elements.date.addEventListener('change', () => {
+      sessionStorage.setItem('selectedDate', elements.date.value);
+    });
   }
   
   function fetchSuggestions(query) {
@@ -168,8 +178,11 @@ const MealApp = (() => {
   }
 
   function updateMealsJson() {
-    elements.mealsJson.value = JSON.stringify(meals);
+    const serialized = JSON.stringify(meals);
+    elements.mealsJson.value = serialized;
+    sessionStorage.setItem('mealList', serialized);
   }
+  
 
   function cacheSuggestions(key, data) {
     if (Object.keys(cache).length >= MAX_CACHE_SIZE) {
@@ -177,6 +190,26 @@ const MealApp = (() => {
     }
     cache[key] = data;
   }
+
+  function loadMealsFromSession() {
+    const saved = sessionStorage.getItem('mealList');
+    if (!saved) return;
+  
+    try {
+      const parsedMeals = JSON.parse(saved);
+      parsedMeals.forEach(meal => {
+        meals.push(meal); // Re-populate internal array
+        const row = createMealRow(meal); // Re-render rows
+        elements.tableBody.appendChild(row);
+      });
+  
+      updateMealCounter(parsedMeals.length);
+      updateMealsJson(); // Sync hidden input
+    } catch (e) {
+      console.warn("⚠️ Failed to restore meals from session:", e);
+    }
+  }
+  
 
   function addMeal() {
     if (!validateInputs()) {
