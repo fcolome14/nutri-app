@@ -34,3 +34,22 @@ class DailyMeal(models.Model):
     fiber = models.FloatField(blank=True, null=True)
     protein = models.FloatField(blank=True, null=True)
     calories = models.FloatField(blank=True, null=True)
+
+class BMRRecord(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)  # Link to the user
+    age = models.PositiveIntegerField()
+    height = models.FloatField()  # Height in cm
+    weight = models.FloatField()  # Weight in kg
+    gender = models.CharField(max_length=10, choices=[('male', 'Male'), ('female', 'Female')])
+    activity_level = models.CharField(max_length=20, choices=[
+        ('sedentary', 'Sedentary'),
+        ('light', 'Lightly active'),
+        ('moderate', 'Moderately active'),
+        ('active', 'Active'),
+        ('very-active', 'Very active'),
+    ])
+    bmr = models.FloatField()  # Computed BMR value
+    date = models.DateField(auto_now_add=True)  # Date of the record
+
+    def __str__(self):
+        return f"{self.user.username} - BMR: {self.bmr} kcal/day on {self.date}"

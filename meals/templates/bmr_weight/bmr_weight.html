@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+
+<h2>Weight tracker & BMR Calculator</h2>
+
+<link rel="stylesheet" href="{% static 'meals/css/add_meal.css' %}">
+
+<!-- Section 1: Add Weight, Fat, and Date -->
+<section class="section-container">
+  <h3>Track Weight and Fat</h3>
+  <form method="post" id="weight-form">
+    {% csrf_token %}
+    <div class="input-container">
+      <label for="weight">Weight (kg):</label>
+      <input type="number" id="weight" name="weight" placeholder="e.g., 70" min="1" step="any" required>
+
+      <label for="fat">Body Fat (%):</label>
+      <input type="number" id="fat" name="fat" placeholder="e.g., 20" min="0" max="100" step="any" required>
+
+      <label for="date">Date:</label>
+      <input type="date" id="date" name="date" required>
+    </div>
+
+    <button type="submit" class="save-button">💾 Save Weight and Fat</button>
+  </form>
+
+  <h4>Entries Added: <span id="weight-counter">0</span></h4>
+  <table id="weight-list" class="weight-table">
+    <thead>
+      <tr>
+        <th>Weight</th>
+        <th>Body Fat</th>
+        <th>Date</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="weight-list-body">
+      <!-- Dynamically added rows will go here -->
+    </tbody>
+  </table>
+</section>
+
+<hr>
+
+<!-- Section 2: Basal Kcal Consumption Parameters -->
+<section class="section-container">
+  <h3>BMR Calculator</h3>
+  <p>The Basal Metabolic Rate (BMR) Calculator estimates your basal metabolic rate—the amount of energy expended while at rest in a neutrally temperate environment.</p>
+  
+  <form method="post" id="bmr-form" action="{% url 'compute_bmr' %}">
+    {% csrf_token %}
+    <div class="input-container">
+      <label for="formula">BMR Estimation Formula:</label>
+      <div id="formula-options" class="radio-group">
+        <label>
+          <input type="radio" name="formula" value="mifflin-st-jeor" checked>
+          Mifflin-St Jeor
+        </label>
+        <label>
+          <input type="radio" name="formula" value="harris-benedict">
+          Revised Harris-Benedict
+        </label>
+        <label>
+          <input type="radio" name="formula" value="katch-mcardle">
+          Katch-McArdle
+          <span id="body-fat-container" style="display: none;">
+            <input type="number" id="fat-bmr" name="fat-bmr" placeholder="Body Fat (%)" min="0" max="100" step="any">
+          </span>
+
+          <div id="body-fat-estimator" style="margin-top: 1em;">
+            <button type="button" id="toggle-fat-estimator" class="save-button">Estimate Body Fat % 🔍</button>
+          
+            <div id="fat-estimation-form" class="estimator-card" style="display: none;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h4 style="margin: 0;">🧮 Body Fat Estimation Mode</h4>
+                <button type="button" id="close-estimator" style="background: none; border: none; font-size: 1.2em; cursor: pointer;">❌</button>
+              </div>
+          
+              <p style="font-size: 0.9em; color: #555;">
+                Fill in your measurements below to estimate your body fat % using the U.S. Navy formula.
+              </p>
+          
+              <label for="neck">Neck (cm):</label>
+              <input type="number" id="neck" placeholder="e.g., 37" step="any" min="1">
+          
+              <label for="waist">Waist (cm):</label>
+              <input type="number" id="waist" placeholder="e.g., 80" step="any" min="1">
+          
+              <label for="hips" id="hips-label" style="display: none;">Hips (cm):</label>
+              <input type="number" id="hips" placeholder="e.g., 95" step="any" min="1" style="display: none;">
+          
+              <label for="height-est">Height (cm):</label>
+              <input type="number" id="height-est" placeholder="Same as above" step="any" min="1">
+          
+              <button type="button" id="estimate-fat-btn" class="save-button">Estimate Now ✅</button>
+            </div>
+          </div>          
+          
+        </label>
+      </div>
+
+      <label for="age">Age (years):</label>
+      <input type="number" id="age" name="age" placeholder="e.g., 30" min="1" max="120" required>
+
+      <label for="height">Height (cm):</label>
+      <input type="number" id="height" name="height" placeholder="e.g., 170" min="1" step="any" required>
+
+      <label for="weight-bmr">Weight (kg):</label>
+      <input type="number" id="weight-bmr" name="weight-bmr" placeholder="e.g., 70" min="1" step="any" required>
+
+      <label for="activity-level">Activity Level:</label>
+      <select id="activity-level" name="activity-level" required>
+        <option value="" disabled selected>Select your activity level</option>
+        <option value="sedentary">Sedentary (little or no exercise)</option>
+        <option value="light">Lightly active (light exercise/sports 1-3 days/week)</option>
+        <option value="moderate">Moderately active (moderate exercise/sports 3-5 days/week)</option>
+        <option value="active">Active (hard exercise/sports 6-7 days/week)</option>
+        <option value="very-active">Very active (very hard exercise/physical job)</option>
+      </select>
+
+      <label for="gender">Gender:</label>
+      <select id="gender" name="gender" required>
+        <option value="" disabled selected>Select your gender</option>
+        <option value="male">Male</option>
+        <option value="female">Female</option>
+      </select>
+    </div>
+
+    <button type="button" id="compute-bmr-button" class="save-button">Calculate</button>
+  </form>
+  <p id="bmr-result"><strong>Your BMR result will appear here.</strong></p>
+</section>
+
+<script src="{% static 'meals/js/add_bmr.js' %}"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof WeightApp !== 'undefined' && WeightApp.init) {
+      WeightApp.init();
+    }
+  });
+</script>
+{% endblock %}

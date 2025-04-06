@@ -29,7 +29,7 @@
 
   <div class="button-container">
     <button type="button" onclick="addMeal()" id="add-meal-button" class="add-meal" title="Add Meal">➕ Add Meal</button>
-    <button type="button" onclick="clearAll()" class="clear-button" title="Clear All">🗑️ Clear All</button>
+    <button type="button" id="clear-all-button" class="clear-button" title="Clear All">🗑️ Clear All</button>
   </div>
 
   <h4>Items Added: <span id="counter">0</span></h4>
@@ -50,8 +50,6 @@
   <input type="hidden" name="meals_json" id="meals-json">
   <button type="submit" class="save-button">💾 Save All</button>
 </form>
-
-<div id="feedback-message" class="hidden">Meals saved successfully!</div>
 
 <script src="{% static 'meals/js/add_meal.js' %}"></script>
 {% endblock %}

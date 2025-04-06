@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from .models import DailyMeal, Food
+from .models import DailyMeal, Food, BMRRecord
 from django.http import JsonResponse
 from .forms import FoodForm
 import json
@@ -91,6 +91,72 @@ def add_food(request):
         form = FoodForm()
     return render(request, 'food/add_food.html', {'form': form})
 
+def bmr_weight(request):
+    return render(request, 'bmr_weight/bmr_weight.html')
+
+def compute_bmr(request):
+    if request.method == 'POST':
+        try:
+            if request.headers.get('Content-Type') == 'application/json':
+                data = json.loads(request.body)
+            else:
+                data = request.POST
+
+            formula = data.get('formula')
+            age = int(data.get('age'))
+            height = float(data.get('height'))
+            weight = float(data.get('weight'))
+            activity_level = data.get('activity_level')
+            gender = data.get('gender')
+            fat = data.get('fat')  # Optional
+
+            if not formula or not age or not height or not weight or not activity_level or not gender:
+                return JsonResponse({'error': 'All fields are required except Body Fat for non-Katch-McArdle formulas.'}, status=400)
+
+            # Calculate BMR
+            bmr = None
+            if formula == 'mifflin-st-jeor':
+                bmr = 10 * weight + 6.25 * height - 5 * age + (5 if gender == 'male' else -161)
+            elif formula == 'harris-benedict':
+                if gender == 'male':
+                    bmr = 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age)
+                else:
+                    bmr = 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age)
+            elif formula == 'katch-mcardle':
+                if fat is None:
+                    return JsonResponse({'error': 'Body Fat percentage is required for the Katch-McArdle formula.'}, status=400)
+                fat = float(fat)
+                if fat <= 0 or fat > 100:
+                    return JsonResponse({'error': 'Body Fat percentage must be between 0 and 100.'}, status=400)
+                lean_body_mass = weight * (1 - fat / 100)
+                bmr = 370 + (21.6 * lean_body_mass)
+            else:
+                return JsonResponse({'error': 'Invalid formula selected.'}, status=400)
+
+            # Adjust based on activity
+            activity_multiplier = {
+                'sedentary': 1.2,
+                'light': 1.375,
+                'moderate': 1.55,
+                'active': 1.725,
+                'very-active': 1.9,
+            }
+
+            multiplier = activity_multiplier.get(activity_level)
+            if not multiplier:
+                return JsonResponse({'error': 'Invalid activity level selected.'}, status=400)
+
+            adjusted_bmr = bmr * multiplier
+
+            return JsonResponse({
+                'bmr': round(bmr, 2),
+                'bmr_adj': round(adjusted_bmr, 2)
+            })
+
+        except (ValueError, TypeError, KeyError) as e:
+            return JsonResponse({'error': f'Invalid input: {str(e)}'}, status=400)
+
+    return JsonResponse({'error': 'Only POST method is allowed.'}, status=405)
 
 def _check_date(start_date, end_date):
     if isinstance(start_date, str) and start_date:
@@ -247,9 +313,9 @@ def history(request):
         },
         'cal_ranges':{
             'max_calories_day': max_calories_day,
-            'max_calories_value': max_calories_value,
+            'max_calories_value': round(max_calories_value,2),
             'min_calories_day': min_calories_day,
-            'min_calories_value': min_calories_value,
+            'min_calories_value': round(min_calories_value,2),
         },
         'today': datetime.today().strftime('%Y-%m-%d'),
         'days': days,
